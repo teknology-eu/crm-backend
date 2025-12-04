@@ -1,22 +1,36 @@
+interface Container {
+  id: string;
+}
+
+interface DockerClient {
+  containers: { [id: string]: Container };
+  start(containerId: string): Promise<void>;
+  stop(containerId: string): Promise<void>;
+  inspect(containerId: string): Promise<Container>;
+}
+
 class DockerManager {
-  async start(containerId: string) {
-    await exec(`docker start ${containerId}`);
-    await exec(`docker attach ${containerId}`);
+  private readonly dockerClient: DockerClient;
+
+  constructor() {
+    this.dockerClient = new DockerClientImpl(); // TODO: Implement DockerClient interface
   }
 
-  async stop(containerId: string) {
-    await exec(`docker stop ${containerId}`);
+  public async start(containerId: string): Promise<void> {
+    console.log(`Starting container ${containerId}`);
+    await this.dockerClient.start(containerId);
   }
 
-  async debug(containerId: string) {
-    const logs = await exec(`docker logs -f ${containerId}`);
-    const info = await exec(`docker inspect --format='{{json .State}}' ${containerId}`);
-    return { logs, info };
+  public async stop(containerId: string): Promise<void> {
+    console.log(`Stopping container ${containerId}`);
+    await this.dockerClient.stop(containerId);
   }
 
-  private async exec(command: string) {
-    const { stdout, stderr } = await execSync(command);
-    if (stderr) throw new Error(`Error executing command: ${command}\n${stderr.toString()}`);
-    return stdout.toString();
+  public async debug(): Promise<void> {
+    console.log("Showing container information");
+    for (const id in this.dockerClient.containers) {
+      const container = await this.dockerClient.inspect(id);
+      console.log(`Container ${container.id}:`, container);
+    }
   }
 }
